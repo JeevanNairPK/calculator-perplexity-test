@@ -1,0 +1,234 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simple Calculator with History</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 30px;
+    background: #f5f5f5;
+    color: #222;
+  }
+  h1 {
+    margin-bottom: 1rem;
+  }
+  .calculator {
+    background: #fff;
+    padding: 20px 25px 25px;
+    border-radius: 8px;
+    max-width: 380px;
+    box-shadow: 0 4px 14px rgb(0 0 0 / 0.1);
+    margin-bottom: 30px;
+  }
+  label {
+    display: inline-block;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 1rem;
+    margin-bottom: 15px;
+    border: 1px solid #bbb;
+    border-radius: 5px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+  }
+  input[type="number"]:focus {
+    border-color: #3a8bfd;
+    outline: none;
+  }
+  .buttons {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  button {
+    background-color: #3a8bfd;
+    border: none;
+    color: white;
+    padding: 10px 18px;
+    margin: 0 6px 10px 6px;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    min-width: 90px;
+    transition: background-color 0.25s ease;
+  }
+  button:hover {
+    background-color: #2b6cd1;
+  }
+  #result {
+    font-size: 1.25rem;
+    font-weight: 700;
+    min-height: 32px;
+    padding: 8px 0;
+    color: #1a1a1a;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgb(0 0 0 / 0.05);
+  }
+  th, td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+    font-size: 0.95rem;
+  }
+  th {
+    background-color: #3a8bfd;
+    color: #fff;
+    font-weight: 600;
+  }
+  tbody tr:hover {
+    background-color: #f0f8ff;
+  }
+  .error {
+    color: #cf222e;
+    font-weight: 600;
+  }
+  @media (max-width: 400px) {
+    .calculator {
+      max-width: 100%;
+      padding: 15px 15px 20px;
+    }
+    button {
+      min-width: 70px;
+      margin: 0 4px 8px 4px;
+      font-size: 0.9rem;
+      padding: 8px 12px;
+    }
+  }
+</style>
+</head>
+<body>
+<h1>Simple Calculator</h1>
+<div class="calculator" aria-label="Calculator">
+  <label for="input1">First Number</label>
+  <input type="number" step="any" id="input1" aria-describedby="input1-desc" placeholder="Enter first number" />
+  <label for="input2">Second Number</label>
+  <input type="number" step="any" id="input2" aria-describedby="input2-desc" placeholder="Enter second number" />
+  <div class="buttons" role="group" aria-label="Calculator operations">
+    <button type="button" id="multiply-button" aria-label="Multiply">Multiply ×</button>
+    <button type="button" id="divide-button" aria-label="Divide">Divide ÷</button>
+  </div>
+  <div id="result" aria-live="polite" aria-atomic="true" role="region"></div>
+</div>
+
+<h2>Calculation History</h2>
+<table id="history-table" aria-label="Previous calculations">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Operation</th>
+      <th>Expression</th>
+      <th>Result</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- History entries will go here -->
+  </tbody>
+</table>
+
+<script>
+(() => {
+  const input1 = document.querySelector('#input1');
+  const input2 = document.querySelector('#input2');
+  const multiplyBtn = document.querySelector('#multiply-button');
+  const divideBtn = document.querySelector('#divide-button');
+  const resultEl = document.querySelector('#result');
+  const historyTableBody = document.querySelector('#history-table tbody');
+
+  let history = [];
+
+  function validateInputs() {
+    const val1 = input1.value.trim();
+    const val2 = input2.value.trim();
+
+    if (val1 === '' || val2 === '') {
+      return { valid: false, message: 'Both numbers are required.' };
+    }
+    const num1 = Number(val1);
+    const num2 = Number(val2);
+    if (isNaN(num1) || isNaN(num2)) {
+      return { valid: false, message: 'Please enter valid numeric values.' };
+    }
+    return { valid: true, num1, num2 };
+  }
+
+  function renderHistory() {
+    historyTableBody.innerHTML = '';
+    history.forEach((entry, i) => {
+      const tr = document.createElement('tr');
+      const idxTd = document.createElement('td');
+      idxTd.textContent = (i + 1).toString();
+      const opTd = document.createElement('td');
+      opTd.textContent = entry.operation;
+      const exprTd = document.createElement('td');
+      exprTd.textContent = `${entry.num1} ${entry.symbol} ${entry.num2}`;
+      const resTd = document.createElement('td');
+      resTd.textContent = entry.result;
+      tr.append(idxTd, opTd, exprTd, resTd);
+      historyTableBody.appendChild(tr);
+    });
+  }
+
+  function addToHistory(op, symbol, num1, num2, res) {
+    history.unshift({
+      operation: op,
+      symbol,
+      num1,
+      num2,
+      result: res,
+    });
+    if (history.length > 20) history.pop(); // Keep max 20 entries
+    renderHistory();
+  }
+
+  function showResult(text, isError = false) {
+    resultEl.textContent = text;
+    resultEl.classList.toggle('error', isError);
+  }
+
+  multiplyBtn.addEventListener('click', () => {
+    const { valid, num1, num2, message } = validateInputs();
+    if (!valid) {
+      showResult(message, true);
+      return;
+    }
+    const product = num1 * num2;
+    const resStr = product.toFixed(6).replace(/\.?0+$/, ''); // Trim trailing zeros
+    showResult(`${num1} × ${num2} = ${resStr}`);
+    addToHistory('Multiplication', '×', num1, num2, resStr);
+  });
+
+  divideBtn.addEventListener('click', () => {
+    const { valid, num1, num2, message } = validateInputs();
+    if (!valid) {
+      showResult(message, true);
+      return;
+    }
+    if (num2 === 0) {
+      showResult('Error: Division by zero is not allowed.', true);
+      return;
+    }
+    const quotient = num1 / num2;
+    const resStr = quotient.toFixed(6).replace(/\.?0+$/, ''); // Trim trailing zeros
+    showResult(`${num1} ÷ ${num2} = ${resStr}`);
+    addToHistory('Division', '÷', num1, num2, resStr);
+  });
+
+  // Initial clear result
+  showResult('');
+})();
+</script>
+</body>
+</html>
+```
